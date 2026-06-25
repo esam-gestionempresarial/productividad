@@ -19,41 +19,43 @@ SELECT
     /* Fecha del primer pago cronológico realizado */
     kardex.fecha_primer_pago AS FECHA_PAGO_1RA_CUOTA,
     /* Lógica de Estado_UPI según la fase formativa */
-    CASE 
+    CASE
         WHEN kardex.total_cuotas= 0 THEN 'Prospecto'
-        WHEN c.nombre = 'Licenciatura'          THEN IF(kardex.total_cuotas BETWEEN 1 AND 109, 'Pre inscrito', 'Inscrito')
-        WHEN c.nombre = 'Técnico Universitario' THEN IF(kardex.total_cuotas BETWEEN 1 AND 99,  'Pre inscrito', 'Inscrito')
-        WHEN c.nombre = 'Diplomado'             THEN IF(kardex.total_cuotas BETWEEN 1 AND 89,  'Pre inscrito', 'Inscrito')
-        WHEN c.nombre = 'Maestría'              THEN IF(kardex.total_cuotas BETWEEN 1 AND 149, 'Pre inscrito', 'Inscrito')
+        WHEN c.nombre = 'Licenciatura' THEN IF(kardex.total_cuotas BETWEEN 1 AND 109, 'Pre inscrito', 'Inscrito')
+        WHEN c.nombre = 'Técnico Universitario' THEN IF(kardex.total_cuotas BETWEEN 1 AND 99, 'Pre inscrito', 'Inscrito')
+        WHEN c.nombre = 'Diplomado' THEN IF(kardex.total_cuotas BETWEEN 1 AND 89, 'Pre inscrito', 'Inscrito')
+        WHEN c.nombre = 'Maestría' THEN IF(kardex.total_cuotas BETWEEN 1 AND 149, 'Pre inscrito', 'Inscrito')
         ELSE 'Sin Estado'
     END AS ESTADO_UPI,
     /* ── INFORMACIÓN FINANCIERA GLOBAL ── */
     kardex.monto_total_plan AS MONTO_TOTAL_PLAN,
     kardex.monto_total_cancelado AS MONTO_CANCELADO,
-    kardex.monto_total_saldo AS SALDO
-FROM productionacademicoesamdb.inscripciones i 
+    kardex.monto_total_saldo AS SALDO,
+    i2.abreviatura AS CONVENIO
+FROM productionacademicoesamdb.inscripciones i
 INNER JOIN productionacademicoesamdb.programas p ON i.idprograma = p.id
 INNER JOIN productionacademicoesamdb.postgrados p4 ON p.idpostgrado = p4.id
 INNER JOIN productionacademicoesamdb.categorias c ON p4.idcategoria = c.id
 INNER JOIN productionacademicoesamdb.plan_cobros_programa pcp ON i.plan_cobro_programa_id = pcp.id
 INNER JOIN productionadminesamdb.sedes s ON p.idsede = s.id
-INNER JOIN productionadminesamdb.personas p2 ON i.idasesor = p2.id 
+INNER JOIN productionadminesamdb.personas p2 ON i.idasesor = p2.id
 INNER JOIN productionadminesamdb.personas p3 ON i.idestudiante = p3.id
-INNER JOIN productionadminesamdb.unidad_negocio un ON s.unidad_negocio = un.id 
+INNER JOIN productionadminesamdb.unidad_negocio un ON s.unidad_negocio = un.id
+INNER JOIN productionadminesamdb.instituciones i2 ON p.iduniversidad = i2.id
 /* ════════════════════════════════════════════════════
    SUBQUERY KARDEX: Agrupación financiera por inscrito
    ════════════════════════════════════════════════════ */
 INNER JOIN (
-    SELECT 
+    SELECT
         pp.inscripcion_id,
         -- Totales económicos globales de la cuenta del alumno
         SUM(pp.monto) AS monto_total_plan,
         SUM(IFNULL(dpi.monto, 0)) AS monto_total_cancelado,
         SUM(pp.monto - IFNULL(dpi.monto, 0)) AS monto_total_saldo,
-        -- Apertura analítica de montos reales pagados por concepto principal
+        -- Apertura analítica de monto pagado por concepto de matrícula
         SUM(CASE WHEN pp.concepto_pago_id = 1 THEN IFNULL(dpi.monto, 0) ELSE 0 END) AS pago_matricula,
         -- Lógica para mostrar la suma de TODAS las cuotas pagadas (Basado en nro_cuota > 0)
-        SUM(CASE WHEN pp.nro_cuota > 0 THEN IFNULL(dpi.monto, 0) ELSE 0 END) AS total_cuotas,      
+        SUM(CASE WHEN pp.nro_cuota > 0 THEN IFNULL(dpi.monto, 0) ELSE 0 END) AS total_cuotas,
         -- Captura del primer pago histórico válido en el tiempo
         DATE(MIN(CASE WHEN dpi.estado = 1 THEN pi2.fecha_registro END)) AS fecha_primer_pago
     FROM productionacademicoesamdb.plan_pagos pp
