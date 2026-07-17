@@ -1,68 +1,141 @@
+WITH
+-- 1) Matrícula (concepto 1)
+cte_matricula AS (
+    SELECT
+        pp.inscripcion_id,
+        SUM(pp.monto) AS monto_matricula,
+        SUM(pp.saldo) AS saldo_matricula,
+        MAX(dpi.fecha_registro_pago) AS fecha_primer_pago_matricula
+    FROM productionacademicoesamdb.plan_pagos pp
+    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi
+           ON dpi.cuota_id = pp.id AND dpi.estado = 1
+    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi
+           ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
+    WHERE pp.concepto_pago_id = 1
+    GROUP BY pp.inscripcion_id
+),
+-- 2) Colegiatura 1 (concepto 2)
+cte_colegiatura_c1 AS (
+    SELECT
+        pp.inscripcion_id,
+        SUM(pp.monto) AS monto_colegiatura1,
+        SUM(pp.saldo) AS saldo_colegiatura1,
+        MAX(dpi.fecha_registro_pago) AS fecha_primer_pago_colegiatura
+    FROM productionacademicoesamdb.plan_pagos pp
+    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi
+           ON dpi.cuota_id = pp.id AND dpi.estado = 1
+    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi
+           ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
+    WHERE pp.concepto_pago_id = 2 AND pp.nro_cuota = 1
+    GROUP BY pp.inscripcion_id
+),
+-- 3) Cuota 1 (concepto 312)
+cte_cuota_c1 AS (
+    SELECT
+        pp.inscripcion_id,
+        SUM(pp.monto) AS monto_cuota1,
+        SUM(pp.saldo) AS saldo_cuota1,
+        MAX(dpi.fecha_registro_pago) AS fecha_primer_pago_cuota
+    FROM productionacademicoesamdb.plan_pagos pp
+    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi
+           ON dpi.cuota_id = pp.id AND dpi.estado = 1
+    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi
+           ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
+    WHERE pp.concepto_pago_id = 312 AND pp.nro_cuota = 1
+    GROUP BY pp.inscripcion_id
+),
+-- 4) Saldo total del plan completo
+cte_saldo_total AS (
+    SELECT
+        pp.inscripcion_id,
+        SUM(pp.monto) AS monto_total_plan,
+        SUM(pp.saldo) AS saldo_total_plan
+    FROM productionacademicoesamdb.plan_pagos pp
+    GROUP BY pp.inscripcion_id
+)
 SELECT
     un.nombre AS UNIDAD,
     s.nombre AS SEDE,
-    CONCAT_WS(' ', p2.nombres, p2.pri_apellido, p2.seg_apellido) AS ASESOR,
-    p2.num_doc AS `CI ASESOR`,
+    CONCAT_WS(' ', p3.nombres, p3.pri_apellido, p3.seg_apellido) AS ASESOR,
+    p3.num_doc AS CI_ASESOR,
+    CONCAT_WS(' ', p4.nombres, p4.pri_apellido, p4.seg_apellido) AS ALUMNO,
+    p4.num_doc AS CI_ALUMNO,
+    c.nombre AS TIPO_PROGRAMA,
     i.id AS ID_INSCRIPCION,
-    DATE(i.fecha_registro) AS FECHA_REGISTRO,
-    CONCAT_WS(' ', p3.nombres, p3.pri_apellido, p3.seg_apellido) AS ALUMNO,
-    p3.num_doc AS CI_ALUMNO,
-    c.nombre AS TIPO,
     p.codigo AS COD_CONTABLE,
     p.nombre_compuesto AS PROGRAMA,
-    /* Identifica si el plan es Contado o Crédito */
-    IF(pcp.nombre LIKE '%CONTADO%', 'Contado', 'Crédito') AS TIPO_PLAN_PAGO,
-    /* DESGLOSE DE CONCEPTOS REALES PAGADOS (Control dpi.estado = 1) */
-    kardex.pago_matricula AS MATRICULA,
-    /* La suma de todas las cuotas pagadas */
-    kardex.total_cuotas AS TOTAL_CUOTAS,
-    /* Fecha del primer pago cronológico realizado */
-    kardex.fecha_primer_pago AS FECHA_PAGO_1RA_CUOTA,
-    /* Lógica de Estado_UPI según la fase formativa */
+    IF(UPPER(pcp.nombre) LIKE '%CONTADO%', 'Contado', 'Crédito') AS TIPO_PLAN_PAGO,
+    -- Columnas de montos separadas
+    IFNULL(mat.monto_matricula, 0) AS MONTO_MATRICULA,
+    IFNULL(mat.saldo_matricula, 0) AS SALDO_MATRICULA,
+    IFNULL(cc1.monto_colegiatura1, 0) AS MONTO_COLEGIATURA1,
+    IFNULL(cc1.saldo_colegiatura1, 0) AS SALDO_COLEGIATURA1,
+    IFNULL(cu1.monto_cuota1, 0) AS MONTO_CUOTA1,
+    IFNULL(cu1.saldo_cuota1, 0) AS SALDO_CUOTA1,
+    IFNULL(st.monto_total_plan, 0) AS MONTO_TOTAL_PLAN,
+    IFNULL(st.saldo_total_plan, 0) AS SALDO_TOTAL_PLAN,
+    -- Toma la fecha más reciente de pago entre matrícula y (Colegiatura 1 o Cuota 1)
+    CASE 
+        WHEN mat.fecha_primer_pago_matricula IS NOT NULL AND COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota) IS NOT NULL 
+            THEN GREATEST(mat.fecha_primer_pago_matricula, COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota))
+        ELSE COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota, mat.fecha_primer_pago_matricula)
+    END AS FECHA_PAGO_PRODUCTIVIDAD,
+    -- Se evalúa que matrícula sea 0 (o no exista) y que (Colegiatura 1 o Cuota 1) esté en 0
+    IF(
+        IFNULL(mat.saldo_matricula, 0) = 0 
+        AND COALESCE(cc1.saldo_colegiatura1, cu1.saldo_cuota1, 1) = 0, 
+        'INSCRITO', 'NO INSCRITO'
+    ) AS CONDICION_PRODUCTIVIDAD,
     CASE
-        WHEN kardex.total_cuotas= 0 THEN 'Prospecto'
-        WHEN c.nombre = 'Licenciatura' THEN IF(kardex.total_cuotas BETWEEN 1 AND 109, 'Pre inscrito', 'Inscrito')
-        WHEN c.nombre = 'Técnico Universitario' THEN IF(kardex.total_cuotas BETWEEN 1 AND 99, 'Pre inscrito', 'Inscrito')
-        WHEN c.nombre = 'Diplomado' THEN IF(kardex.total_cuotas BETWEEN 1 AND 89, 'Pre inscrito', 'Inscrito')
-        WHEN c.nombre = 'Maestría' THEN IF(kardex.total_cuotas BETWEEN 1 AND 149, 'Pre inscrito', 'Inscrito')
-        ELSE 'Sin Estado'
-    END AS ESTADO_UPI,
-    /* ── INFORMACIÓN FINANCIERA GLOBAL ── */
-    kardex.monto_total_plan AS MONTO_TOTAL_PLAN,
-    kardex.monto_total_cancelado AS MONTO_CANCELADO,
-    kardex.monto_total_saldo AS SALDO,
-    i2.abreviatura AS CONVENIO
+        WHEN i.estado_ins = 0 THEN 'PRE-INSCRITO'
+        WHEN i.estado_ins = 1 THEN 'INSCRITO'
+        WHEN i.estado_ins = 2 THEN 'RETIRADO'
+        WHEN i.estado_ins = 3 THEN 'CAMBIADO'
+        WHEN i.estado_ins = 4 THEN 'CONGELADO'
+        WHEN i.estado_ins = 5 THEN 'PAGADO'
+        ELSE 'NO IDENTIFICADO'
+    END AS ESTADO_INSCRIPCION,
+    IFNULL(i2.abreviatura, 'Sin Convenio') AS CONVENIO,
+    CASE MONTH(
+        CASE 
+            WHEN mat.fecha_primer_pago_matricula IS NOT NULL AND COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota) IS NOT NULL 
+                THEN GREATEST(mat.fecha_primer_pago_matricula, COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota))
+            ELSE COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota, mat.fecha_primer_pago_matricula)
+        END
+    )
+        WHEN 1 THEN 'ENERO'
+        WHEN 2 THEN 'FEBRERO'
+        WHEN 3 THEN 'MARZO'
+        WHEN 4 THEN 'ABRIL'
+        WHEN 5 THEN 'MAYO'
+        WHEN 6 THEN 'JUNIO'
+        WHEN 7 THEN 'JULIO'
+        WHEN 8 THEN 'AGOSTO'
+        WHEN 9 THEN 'SEPTIEMBRE'
+        WHEN 10 THEN 'OCTUBRE'
+        WHEN 11 THEN 'NOVIEMBRE'
+        WHEN 12 THEN 'DICIEMBRE'
+    END AS MES
 FROM productionacademicoesamdb.inscripciones i
-INNER JOIN productionacademicoesamdb.programas p ON i.idprograma = p.id
-INNER JOIN productionacademicoesamdb.postgrados p4 ON p.idpostgrado = p4.id
-INNER JOIN productionacademicoesamdb.categorias c ON p4.idcategoria = c.id
-INNER JOIN productionacademicoesamdb.plan_cobros_programa pcp ON i.plan_cobro_programa_id = pcp.id
-INNER JOIN productionadminesamdb.sedes s ON p.idsede = s.id
-INNER JOIN productionadminesamdb.personas p2 ON i.idasesor = p2.id
-INNER JOIN productionadminesamdb.personas p3 ON i.idestudiante = p3.id
-INNER JOIN productionadminesamdb.unidad_negocio un ON s.unidad_negocio = un.id
-INNER JOIN productionadminesamdb.instituciones i2 ON p.iduniversidad = i2.id
-/* ════════════════════════════════════════════════════
-   SUBQUERY KARDEX: Agrupación financiera por inscrito
-   ════════════════════════════════════════════════════ */
-INNER JOIN (
-    SELECT
-        pp.inscripcion_id,
-        -- Totales económicos globales de la cuenta del alumno
-        SUM(pp.monto) AS monto_total_plan,
-        SUM(IFNULL(dpi.monto, 0)) AS monto_total_cancelado,
-        SUM(pp.monto - IFNULL(dpi.monto, 0)) AS monto_total_saldo,
-        -- Apertura analítica de monto pagado por concepto de matrícula
-        SUM(CASE WHEN pp.concepto_pago_id = 1 THEN IFNULL(dpi.monto, 0) ELSE 0 END) AS pago_matricula,
-        -- Lógica para mostrar la suma de TODAS las cuotas pagadas (Basado en nro_cuota > 0)
-        SUM(CASE WHEN pp.nro_cuota > 0 THEN IFNULL(dpi.monto, 0) ELSE 0 END) AS total_cuotas,
-        -- Captura del primer pago histórico válido en el tiempo
-        DATE(MIN(CASE WHEN dpi.estado = 1 THEN pi2.fecha_registro END)) AS fecha_primer_pago
-    FROM productionacademicoesamdb.plan_pagos pp
-    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi ON pp.id = dpi.cuota_id AND dpi.estado = 1
-    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi2 ON pi2.id = dpi.pagos_inscripcion_id
-    GROUP BY pp.inscripcion_id
-) kardex ON kardex.inscripcion_id = i.id
+INNER JOIN productionacademicoesamdb.programas p ON p.id = i.idprograma
+INNER JOIN productionacademicoesamdb.postgrados p2 ON p2.id = p.idpostgrado
+INNER JOIN productionacademicoesamdb.categorias c ON c.id = p2.idcategoria
+LEFT JOIN  productionacademicoesamdb.plan_cobros_programa pcp ON pcp.id = i.plan_cobro_programa_id
+INNER JOIN productionadminesamdb.personas p4 ON p4.id = i.idestudiante
+LEFT JOIN  productionadminesamdb.personas p3 ON p3.id = i.idasesor
+INNER JOIN productionadminesamdb.sedes s ON s.id = p.idsede
+LEFT JOIN  productionadminesamdb.unidad_negocio un ON un.id = s.unidad_negocio
+LEFT JOIN  productionadminesamdb.instituciones i2 ON i2.id = p.iduniversidad
+LEFT JOIN  cte_matricula mat ON mat.inscripcion_id = i.id
+LEFT JOIN  cte_colegiatura_c1 cc1 ON cc1.inscripcion_id = i.id
+LEFT JOIN  cte_cuota_c1 cu1 ON cu1.inscripcion_id = i.id
+LEFT JOIN  cte_saldo_total st ON st.inscripcion_id = i.id
 WHERE s.id IN (82,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,102,103,104,105,106,108,109,115,116,117,118,119,120,121,122,123,124,126)
-  AND i.fecha_registro BETWEEN '2026-01-01 00:00:00' AND '2026-05-31 23:59:59'
-ORDER BY i.fecha_registro ASC;
+  AND (
+        CASE 
+            WHEN mat.fecha_primer_pago_matricula IS NOT NULL AND COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota) IS NOT NULL 
+                THEN GREATEST(mat.fecha_primer_pago_matricula, COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota))
+            ELSE COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota, mat.fecha_primer_pago_matricula)
+        END
+      ) BETWEEN '2026-01-01 00:00:00' AND '2026-06-30 23:59:59'
+ORDER BY i.id;
