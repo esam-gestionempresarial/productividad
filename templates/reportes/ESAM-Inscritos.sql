@@ -56,6 +56,7 @@ SELECT
     i.id AS ID_INSCRIPCION,
     p.codigo AS COD_CONTABLE,
     p.nombre_compuesto AS PROGRAMA,
+    p.id AS ID_PROGRAMA,
     IF(UPPER(pcp.nombre) LIKE '%CONTADO%', 'Contado', 'Crédito') AS TIPO_PLAN_PAGO,
     CASE WHEN c.nombre IN ('Esam Cursos', 'Curso Modular') THEN 1 ELSE 0 END AS ES_CURSO,
     IFNULL(mat.monto_matricula, 0) AS MONTO_MATRICULA,
@@ -122,7 +123,8 @@ LEFT JOIN  productionadminesamdb.instituciones i2 ON i2.id = p.iduniversidad
 LEFT JOIN  cte_matricula mat ON mat.inscripcion_id = i.id
 LEFT JOIN  cte_colegiatura_c1 cc1 ON cc1.inscripcion_id = i.id
 LEFT JOIN  cte_saldo_total st ON st.inscripcion_id = i.id
-WHERE s.id IN (1,2,3,4,5,6,7,8,14,15,16,18,20,22,23,25,26,37,50,51,52,80,125,127,128,129, 132)
+WHERE s.id IN (1,2,3,4,5,6,7,8,14,15,16,18,20,22,23,25,26,37,50,51,52,80,125,127,128,129,132,134)
+  AND i2.id = 9
   AND (
         CASE
             WHEN c.nombre IN ('Esam Cursos', 'Curso Modular') THEN st.fecha_primer_pago_plan

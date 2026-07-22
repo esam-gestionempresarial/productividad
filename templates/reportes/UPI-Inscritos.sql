@@ -64,6 +64,7 @@ SELECT
     i.id AS ID_INSCRIPCION,
     p.codigo AS COD_CONTABLE,
     p.nombre_compuesto AS PROGRAMA,
+    p.id AS ID_PROGRAMA,
     IF(UPPER(pcp.nombre) LIKE '%CONTADO%', 'Contado', 'Crédito') AS TIPO_PLAN_PAGO,
     -- Columnas de montos separadas
     IFNULL(mat.monto_matricula, 0) AS MONTO_MATRICULA,
@@ -131,6 +132,7 @@ LEFT JOIN  cte_colegiatura_c1 cc1 ON cc1.inscripcion_id = i.id
 LEFT JOIN  cte_cuota_c1 cu1 ON cu1.inscripcion_id = i.id
 LEFT JOIN  cte_saldo_total st ON st.inscripcion_id = i.id
 WHERE s.id IN (82,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,102,103,104,105,106,108,109,115,116,117,118,119,120,121,122,123,124,126)
+  AND i2.id IN (301,307)
   AND (
         CASE 
             WHEN mat.fecha_primer_pago_matricula IS NOT NULL AND COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota) IS NOT NULL 
