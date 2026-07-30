@@ -109,7 +109,8 @@ SELECT
     WHEN 10 THEN 'OCTUBRE'
     WHEN 11 THEN 'NOVIEMBRE'
     WHEN 12 THEN 'DICIEMBRE'
-END AS MES
+END AS MES,
+i.created_at AS FECHA_REGISTRO_INSCRIPCION /* fecha de creación de la inscripción en el portal */
 FROM productionacademicoesamdb.inscripciones i
 INNER JOIN productionacademicoesamdb.programas p ON p.id = i.idprograma
 INNER JOIN productionacademicoesamdb.postgrados p2 ON p2.id = p.idpostgrado
