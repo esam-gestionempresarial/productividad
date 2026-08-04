@@ -1,0 +1,12 @@
+{
+  "files.associations": {
+    "*.md": "markdown"
+  },
+  "workbench.editorAssociations": {
+    "*.md": "default"
+  },
+  "markdown.preview.breaks": true,
+  "markdown.preview.markEditorSelection": true,
+  "markdown.preview.scrollPreviewWithEditor": true,
+  "markdown.validate.enabled": true
+}

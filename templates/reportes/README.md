@@ -1,8 +1,8 @@
-# Informe Técnico: Consultas SQL de Productividad e Inscripciones — Grupo Empresarial ESAM
+# Informe: Consultas SQL de Productividad e Inscripciones — Grupo Empresarial ESAM
 
 ## 1. Objetivo General
 
-Este informe documenta la arquitectura, lógica de negocio y optimizaciones aplicadas a las consultas SQL utilizadas para calcular los reportes de **productividad comercial y estado de inscripciones** de las distintas Unidades de Negocio del Grupo Empresarial ESAM.
+Este informe documenta la arquitectura y lógica de negocio aplicadas a las consultas SQL utilizadas para calcular los reportes de productividad comercial y estado de inscripciones de las distintas Unidades de Negocio del Grupo Empresarial ESAM.
 
 El objetivo principal es estandarizar la extracción de datos en un entorno multisede, garantizando la trazabilidad financiera exacta (montos pactados, cancelados y saldos) y eliminando discrepancias por datos duplicados.
 
@@ -45,7 +45,7 @@ cte_pagos_info AS (
 
 Esta subconsulta agrupa estrictamente a nivel de `cuota_id`, garantizando una relación 1 a 1 antes de realizar el cálculo de los saldos y montos.
 
-### 3.3. Estandarización del Trinomio Financiero
+### 3.3. Estandarización del detalle financiero
 Todas las consultas muestran de forma explícita el estado financiero de cada concepto relevante:
 * **`MONTO`**: Suma pactada en el plan de pagos (`SUM(pp.monto)`).
 * **`CANCELADO`**: Dinero efectivamente cobrado (`SUM(pp.monto - pp.saldo)`).
@@ -59,11 +59,11 @@ Todas las consultas muestran de forma explícita el estado financiero de cada co
 | :--- | :--- | :--- | :--- |
 | **ESAM** | `1, 2, 3, 4, 5, 6, 7, 8, 14, 15, 16, 18, 20, 22, 23, 25, 26, 37, 50, 51, 52, 80, 125, 127, 128, 129, 132, 134` | `1` (Matrícula), `2` (Colegiatura C1), `Plan Total` | Cursos: saldo total del plan = 0; Contado: saldo colegiatura C1 = 0; Crédito: saldo matrícula = 0 AND saldo colegiatura C1 = 0 |
 | **DBS** | `24, 27, 28, 29, 30, 31, 32, 33, 42, 53, 107` (Inst. `49`) | `133` (Cuota Inicial) / `2` (Colegiatura C1) | Saldo Cuota Inicial = 0 OR Saldo Colegiatura C1 = 0 |
-| **UPI ESAM** | `82, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 102, 103, 104, 105, 106, 108, 109, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 126` | `1` (Matrícula), `2` (Colegiatura C1), `312` (Cuota 1) | Saldo matrícula = 0 AND (Saldo colegiatura C1 OR Saldo cuota 1) = 0 |
+| **UPI ESAM** | `82, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 102, 103, 104, 105, 106, 108, 109, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 126` | `1` (Matrícula), `2` (Colegiatura C1), `312` (Cuota UPI 1) | Saldo matrícula = 0 AND (Saldo colegiatura C1 OR Saldo cuota 1) = 0 |
 | **ISPI** | `49` | `27` (Cuota 1 Mensualidad) | Saldo Cuota 1 Mensualidad = 0 |
-| **CCA** | `9, 10, 48, 79` | `8` (Cuota 1 Mensualidad) / `17` (Plan Total) | Para cursos: saldo total del plan = 0; para carreras: saldo cuota 1 = 0 |
-| **CIBERKIDS** | `11, 12, 13, 47, 81` | `27` (Cuota 1) / `311` (Total Plan) | Saldo = 0 (Según categoría del programa) |
-| **CCTP** | `39` | `8` (Cuota 1) / `18` (Cuota 1) | Saldo Cuota 1 = 0 (Según tipo: Curso o Programa) |
+| **CCA** | `9, 10, 48, 79` | `8` (Cuota 1 Mensualidades) / `17` (Cursos de formación continua) | Para cursos: saldo total del plan = 0; para carreras: saldo cuota 1 = 0 |
+| **CIBERKIDS** | `11, 12, 13, 47, 81` | `27` (Cuota 1 Mensualidad) / `311` (Cursos) | Saldo = 0 (Según categoría del programa) |
+| **CCTP** | `39` | `8` (Cuota 1 Mensualidades) / `18` (Cuota 1 Cursos) | Saldo Cuota 1 = 0 (Según tipo: Curso o Programa) |
 | **Cyber Corp** | `21, 34, 35, 36, 40, 44, 46, 78, 83, 114, 119` | `18` (Curso CyberCorp) | Saldo total del concepto 18 = 0 |
 
 ---
@@ -122,7 +122,7 @@ Evaluar la productividad de las inscripciones asociadas a la unidad UPI ESAM, co
 #### Lógica Financiera y CTEs
 * `cte_matricula`: consolida el Concepto **1** (Matrícula).
 * `cte_colegiatura_c1`: consolida el Concepto **2** (Colegiatura, Cuota 1).
-* `cte_cuota_c1`: consolida el Concepto **312** (Cuota 1) como criterio alternativo de ingreso.
+* `cte_cuota_c1`: consolida el Concepto **312** (Cuota UPI 1) como criterio alternativo de ingreso.
 * `cte_saldo_total`: resume el saldo total del plan completo para la trazabilidad financiera general.
 
 #### Tablas Relacionadas (`JOINS`)
@@ -177,8 +177,8 @@ Gestionar la productividad de la unidad CCA diferenciando entre programas de car
 Gestionar la productividad para unidades con oferta mixta (Talleres, Cursos, Kinder, Estimulación y Programas).
 
 #### Lógica Financiera y CTEs
-* `cte_mensualidad_c1`: Aplica el Concepto **27** (Cuota 1) para las categorías `14` (Programas), `34` (Estimulación) y `35` (Kinder).
-* `cte_cursos_total`: Aplica el Concepto **311** (Plan Total) para las categorías `12` (Talleres) y `13` (Cursos).
+* `cte_mensualidad_c1`: Aplica el Concepto **27** (Cuota 1 Mensualidad) para las categorías `14` (Programas), `34` (Estimulación) y `35` (Kinder).
+* `cte_cursos_total`: Aplica el Concepto **311** (Cursos) para las categorías `12` (Talleres) y `13` (Cursos).
 
 #### Tablas Relacionadas (`JOINS`)
 * Incluye `plan_cobros_programa` para clasificar el tipo de plan (`Contado` o `Crédito`).
@@ -195,7 +195,7 @@ Gestionar la productividad para unidades con oferta mixta (Talleres, Cursos, Kin
 Reportar el estado de inscripciones diferenciando dinámicamente si la oferta corresponde a un **Curso** o a un **Programa**.
 
 #### Lógica Financiera y CTEs
-* `cte_mensualidad_c1`: Evalúa la Cuota 1 del Concepto **8** (Programas).
+* `cte_mensualidad_c1`: Evalúa la Cuota 1 del Concepto **8** (Mensualidades).
 * `cte_curso_c1`: Evalúa la Cuota 1 del Concepto **18** (Cursos).
 * Un condicional `CASE` evalúa la columna `p.nombre_compuesto LIKE '%CURSO%'` para determinar qué concepto define la productividad del alumno.
 
