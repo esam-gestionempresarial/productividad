@@ -109,7 +109,8 @@ SELECT
     WHEN 10 THEN 'OCTUBRE'
     WHEN 11 THEN 'NOVIEMBRE'
     WHEN 12 THEN 'DICIEMBRE'
-END AS MES
+END AS MES,
+i.created_at AS fecha_creacion_inscripcion
 FROM productionacademicoesamdb.inscripciones i
 INNER JOIN productionacademicoesamdb.programas p ON p.id = i.idprograma
 INNER JOIN productionacademicoesamdb.postgrados p2 ON p2.id = p.idpostgrado
@@ -131,5 +132,5 @@ WHERE s.id IN (1,2,3,4,5,6,7,8,14,15,16,18,20,22,23,25,26,37,50,51,52,80,125,127
             WHEN UPPER(pcp.nombre) LIKE '%CONTADO%' THEN cc1.fecha_primer_pago_colegiatura
             ELSE COALESCE(cc1.fecha_primer_pago_colegiatura, mat.fecha_primer_pago_matricula)
         END
-      ) BETWEEN '2026-01-01 00:00:00' AND '2026-06-30 23:59:59'
-ORDER BY i.id;
+      ) BETWEEN '2026-01-01 00:00:00' AND NOW()
+ORDER BY cc1.fecha_primer_pago_colegiatura;
