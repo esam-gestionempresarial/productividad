@@ -123,5 +123,5 @@ WHERE s.id = 39
             WHEN UPPER(p.nombre_compuesto) LIKE '%CURSO%' THEN cc1.fecha_pago_curso_c1
             ELSE mc1.fecha_pago_mensualidad_c1
         END
-      ) BETWEEN '2026-01-01 00:00:00' AND '2026-06-30 23:59:59'
+      ) BETWEEN '2026-01-01 00:00:00' AND NOW()
 ORDER BY i.id;
