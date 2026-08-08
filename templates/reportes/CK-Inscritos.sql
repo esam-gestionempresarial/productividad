@@ -120,5 +120,5 @@ WHERE s.id IN (11, 12, 13, 47, 81)
             WHEN c.id IN (12, 13) THEN ct.fecha_ultimo_pago_cursos
             WHEN c.id IN (14, 34, 35) THEN m1.fecha_ultimo_pago_mensualidad
         END
-      ) BETWEEN '2026-01-01 00:00:00' AND '2026-06-30 23:59:59'
+      ) BETWEEN '2026-01-01 00:00:00' AND NOW()
 ORDER BY i.id;
