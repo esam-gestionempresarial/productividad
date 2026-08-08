@@ -113,5 +113,5 @@ WHERE s.id IN (9,10,48,79)
             WHEN c.id IN (8, 9, 10) THEN st.fecha_pago_total_plan
             ELSE mc1.fecha_pago_mensualidad_c1
         END
-      ) BETWEEN '2026-01-01 00:00:00' AND '2026-06-30 23:59:59'
+      ) BETWEEN '2026-01-01 00:00:00' AND NOW()
 ORDER BY i.id;

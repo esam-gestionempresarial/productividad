@@ -1,19 +1,29 @@
 WITH
--- Mensualidad, cuota 1 (concepto 27) — El indicador de productividad para ISPI
+-- CTE 0: Subconsulta pre-agrupada por cuota_id para aislar los abonos/pagos y evitar el Fan-out bug
+cte_pagos_info AS (
+    SELECT
+        dpi.cuota_id,
+        MAX(dpi.fecha_registro_pago) AS fecha_pago,
+        MAX(pi.nro_recibo) AS nro_recibo
+    FROM productionacademicoesamdb.detalle_pagos_inscripcion dpi
+    INNER JOIN productionacademicoesamdb.pagos_inscripcion pi
+           ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
+    WHERE dpi.estado = 1
+    GROUP BY dpi.cuota_id
+),
+-- 1) Mensualidad, cuota 1 (concepto 27) — Indicador de productividad para ISPI
 cte_mensualidad_c1 AS (
     SELECT
         pp.inscripcion_id,
-        pp.monto AS monto_mensualidad_c1,
-        pp.saldo AS saldo_mensualidad_c1,
-        MAX(dpi.fecha_registro_pago) AS fecha_primer_pago_mensualidad,
-        MAX(pi.nro_recibo) AS nro_recibo_mensualidad
+        SUM(pp.monto) AS monto_mensualidad_c1,
+        SUM(pp.monto - pp.saldo) AS cancelado_mensualidad_c1,
+        SUM(pp.saldo) AS saldo_mensualidad_c1,
+        MAX(pinfo.fecha_pago) AS fecha_primer_pago_mensualidad,
+        MAX(pinfo.nro_recibo) AS nro_recibo_mensualidad
     FROM productionacademicoesamdb.plan_pagos pp
-    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi
-           ON dpi.cuota_id = pp.id AND dpi.estado = 1
-    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi
-           ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
+    LEFT JOIN cte_pagos_info pinfo ON pinfo.cuota_id = pp.id
     WHERE pp.concepto_pago_id = 27 AND pp.nro_cuota = 1
-    GROUP BY pp.inscripcion_id, pp.monto, pp.saldo
+    GROUP BY pp.inscripcion_id
 )
 SELECT
     un.nombre AS UNIDAD,
@@ -28,8 +38,9 @@ SELECT
     p.nombre_compuesto AS PROGRAMA,
     p.id AS ID_PROGRAMA,
     IF(UPPER(pcp.nombre) LIKE '%CONTADO%', 'Contado', 'Crédito') AS TIPO_PLAN_PAGO,
-    -- Bloque Mensualidad
+    -- Bloque Mensualidad Completo (Concepto 27)
     IFNULL(cm1.monto_mensualidad_c1, 0) AS MONTO_MENSUALIDAD_CUOTA1,
+    IFNULL(cm1.cancelado_mensualidad_c1, 0) AS CANCELADO_MENSUALIDAD_CUOTA1,
     IFNULL(cm1.saldo_mensualidad_c1, 0) AS SALDO_MENSUALIDAD_CUOTA1,
     -- Fecha e Indicador de Productividad ISPI
     cm1.fecha_primer_pago_mensualidad AS FECHA_PAGO_PRODUCTIVIDAD,
