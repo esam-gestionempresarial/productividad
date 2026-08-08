@@ -124,7 +124,7 @@ LEFT JOIN  productionadminesamdb.instituciones i2 ON i2.id = p.iduniversidad
 LEFT JOIN  cte_matricula mat ON mat.inscripcion_id = i.id
 LEFT JOIN  cte_colegiatura_c1 cc1 ON cc1.inscripcion_id = i.id
 LEFT JOIN  cte_saldo_total st ON st.inscripcion_id = i.id
-WHERE s.id IN (1,2,3,4,5,6,7,8,14,15,16,18,20,22,23,25,26,37,50,51,52,80,125,127,128,129,132,134)
+WHERE s.id IN (1,2,3,4,5,6,7,8,14,15,16,18,20,22,23,25,26,37,50,51,52,80,125,127,128,129,132)
   AND i2.id = 9
   AND (
         CASE
