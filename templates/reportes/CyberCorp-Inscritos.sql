@@ -73,5 +73,5 @@ LEFT JOIN  productionadminesamdb.instituciones i2 ON i2.id = p.iduniversidad
 LEFT JOIN cte_pago_cybercorp cc ON cc.inscripcion_id = i.id
 -- Filtros de sede de Cyber Corp y rango de fechas de productividad
 WHERE s.id IN (21, 34, 35, 36, 40, 44, 46, 78, 83, 114, 119)
-  AND cc.fecha_pago_productividad BETWEEN '2026-01-01 00:00:00' AND '2026-06-30 23:59:59'
+  AND cc.fecha_pago_productividad BETWEEN '2026-01-01 00:00:00' AND NOW()
 ORDER BY i.id;
