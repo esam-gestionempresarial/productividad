@@ -144,5 +144,5 @@ WHERE s.id IN (24,27,28,29,30,31,32,33,42,53,107)
             WHEN IFNULL(cc1.saldo_colegiatura_c1, 1) = 0 THEN cc1.fecha_primer_pago_colegiatura
             ELSE COALESCE(ci.fecha_primer_pago_inicial, cc1.fecha_primer_pago_colegiatura)
         END
-      ) BETWEEN '2026-01-01 00:00:00' AND '2026-06-30 23:59:59'
+      ) BETWEEN '2026-01-01 00:00:00' AND NOW()
 ORDER BY i.id;
