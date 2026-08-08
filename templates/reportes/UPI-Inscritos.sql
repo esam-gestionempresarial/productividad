@@ -7,10 +7,8 @@ cte_matricula AS (
         SUM(pp.saldo) AS saldo_matricula,
         MAX(dpi.fecha_registro_pago) AS fecha_primer_pago_matricula
     FROM productionacademicoesamdb.plan_pagos pp
-    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi
-           ON dpi.cuota_id = pp.id AND dpi.estado = 1
-    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi
-           ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
+    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi ON dpi.cuota_id = pp.id AND dpi.estado = 1
+    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
     WHERE pp.concepto_pago_id = 1
     GROUP BY pp.inscripcion_id
 ),
@@ -22,10 +20,8 @@ cte_colegiatura_c1 AS (
         SUM(pp.saldo) AS saldo_colegiatura1,
         MAX(dpi.fecha_registro_pago) AS fecha_primer_pago_colegiatura
     FROM productionacademicoesamdb.plan_pagos pp
-    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi
-           ON dpi.cuota_id = pp.id AND dpi.estado = 1
-    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi
-           ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
+    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi ON dpi.cuota_id = pp.id AND dpi.estado = 1
+    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
     WHERE pp.concepto_pago_id = 2 AND pp.nro_cuota = 1
     GROUP BY pp.inscripcion_id
 ),
@@ -37,10 +33,8 @@ cte_cuota_c1 AS (
         SUM(pp.saldo) AS saldo_cuota1,
         MAX(dpi.fecha_registro_pago) AS fecha_primer_pago_cuota
     FROM productionacademicoesamdb.plan_pagos pp
-    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi
-           ON dpi.cuota_id = pp.id AND dpi.estado = 1
-    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi
-           ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
+    LEFT JOIN productionacademicoesamdb.detalle_pagos_inscripcion dpi ON dpi.cuota_id = pp.id AND dpi.estado = 1
+    LEFT JOIN productionacademicoesamdb.pagos_inscripcion pi ON pi.id = dpi.pagos_inscripcion_id AND pi.estado = 1
     WHERE pp.concepto_pago_id = 312 AND pp.nro_cuota = 1
     GROUP BY pp.inscripcion_id
 ),
@@ -131,7 +125,9 @@ LEFT JOIN  cte_matricula mat ON mat.inscripcion_id = i.id
 LEFT JOIN  cte_colegiatura_c1 cc1 ON cc1.inscripcion_id = i.id
 LEFT JOIN  cte_cuota_c1 cu1 ON cu1.inscripcion_id = i.id
 LEFT JOIN  cte_saldo_total st ON st.inscripcion_id = i.id
-WHERE s.id IN (82,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,102,103,104,105,106,108,109,115,116,117,118,119,120,121,122,123,124,126)
+WHERE s.id IN (24,27,28,29,30,31,32,33,42,53,107, /* Sedes DBS */
+				1,2,3,4,5,6,7,8,14,15,16,18,20,22,23,25,26,37,50,51,52,80,125,127,128,129,132,134, /* Sedes Esam */
+				82,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,102,103,104,105,106,108,109,115,116,117,118,119,120,121,122,123,124,126)  /* Sedes UPI */
   AND i2.id IN (301,307)
   AND (
         CASE 
@@ -139,5 +135,5 @@ WHERE s.id IN (82,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,102,103,104,105,
                 THEN GREATEST(mat.fecha_primer_pago_matricula, COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota))
             ELSE COALESCE(cc1.fecha_primer_pago_colegiatura, cu1.fecha_primer_pago_cuota, mat.fecha_primer_pago_matricula)
         END
-      ) BETWEEN '2026-01-01 00:00:00' AND '2026-06-30 23:59:59'
+      ) BETWEEN '2026-01-01 00:00:00' AND NOW()
 ORDER BY i.id;
