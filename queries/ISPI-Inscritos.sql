@@ -81,5 +81,5 @@ LEFT JOIN  productionadminesamdb.unidad_negocio un ON un.id = s.unidad_negocio
 LEFT JOIN  productionadminesamdb.instituciones i2 ON i2.id = p.iduniversidad
 LEFT JOIN  cte_mensualidad_c1 cm1 ON cm1.inscripcion_id = i.id
 WHERE s.id = 49 
-  AND cm1.fecha_primer_pago_mensualidad BETWEEN '2026-01-01 00:00:00' AND '2026-06-30 23:59:59'
+  AND cm1.fecha_primer_pago_mensualidad BETWEEN '2026-01-01 00:00:00' AND NOW()
 ORDER BY i.id;
